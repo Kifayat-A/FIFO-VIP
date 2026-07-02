@@ -25,7 +25,6 @@ class driver;
 
     task deq();
         int rd_data;
-
         vif.rd_en = 1;
         @(posedge vif.clk);
         vif.rd_en = 0;
