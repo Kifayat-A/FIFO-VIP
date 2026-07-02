@@ -1,34 +1,20 @@
 `include "interface.sv"
+`include "driver.sv"
+`include "monitor.sv"
 `timescale 1ns/1ps
 
 module tb_top;
 
-  localparam WIDTH = 8;
-  localparam DEPTH = 16;
-  localparam ADDR  = 4;
+    localparam WIDTH = 8;
+    localparam DEPTH = 16;
+    localparam ADDR  = 4;
 
-  bit clk;
-  bit rst_n;
 
-  initial clk = 0;
-  always #5 clk = ~clk;
+    fifo_if #(.WIDTH (WIDTH),.DEPTH (DEPTH),.ADDR  (ADDR)) vif();
 
-  fifo_if #(
-      .WIDTH (WIDTH),
-      .DEPTH (DEPTH),
-      .ADDR  (ADDR)
-  ) vif (
-      .clk   (clk),
-      .rst_n (rst_n)
-  );
-
-  fifo_sync #(
-      .WIDTH (WIDTH),
-      .DEPTH (DEPTH),
-      .ADDR  (ADDR)
-  ) dut (
-      .clk      (clk),
-      .rst_n    (rst_n),
+    fifo_sync #(.WIDTH (WIDTH),.DEPTH (DEPTH),.ADDR  (ADDR)) dut (
+      .clk      (vif.clk),
+      .rst_n    (vif.rst_n),
       .data_in  (vif.data_in),
       .wr_en    (vif.wr_en),
       .rd_en    (vif.rd_en),
@@ -36,72 +22,43 @@ module tb_top;
       .full     (vif.full),
       .empty    (vif.empty),
       .data_vld (vif.data_vld)
-  );
+    );
 
-    task reset();
-        rst_n = 1;
-        @(posedge clk);
-        @(posedge clk);
-        rst_n = 0;
-        @(posedge clk);
-        @(posedge clk);
-        rst_n = 1;
-    endtask
+    driver drv;
+    monitor mon;
 
-    task enq(int data);
-        vif.wr_en = 1;
-        vif.data_in = data;
-        @(posedge clk);
-        vif.wr_en = 0;
-    endtask
+    initial vif.clk = 0;
+    always #5 vif.clk = ~vif.clk;
 
-    task deq();
-        int rd_data;
-
-        vif.rd_en = 1;
-        @(posedge clk);
-        vif.rd_en = 0;
-    endtask
-
-    task monitor_output();
-    int rd_data;
-    forever begin
-        @(posedge clk);
-        #1;
-        if (vif.data_vld) begin
-            rd_data = vif.data_out;
-            $display("[%0t] READ DATA FROM RTL : %0d", $time, rd_data);
-        end
-    end
-    endtask
-
-  initial begin
+    initial begin
         int i;
         int data;
+        drv = new(vif);
+        mon = new(vif);
 
         fork
-        monitor_output();   
+        mon.monitor_output();   
         join_none
         
-        reset();
+        drv.reset();
         
         for(i=0;i<16;i++) begin
             data = $urandom_range(16,0);
-            enq(data);
+            drv.enq(data);
         end
 
         for(i=0;i<16;i++) begin
-            deq();
+            drv.deq();
         end
 
         #200;
         $finish;
-  end
+    end
 
-  initial begin
-    $dumpfile("dump.vcd");
-    $dumpvars(0, tb_top);
-  end
+    initial begin
+      $dumpfile("dump.fst");
+      $dumpvars(0, tb_top);
+    end
 
 
 endmodule

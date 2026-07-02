@@ -2,11 +2,9 @@ interface fifo_if #(
     parameter WIDTH = 8,
     parameter DEPTH = 16,
     parameter ADDR  = 4
-)(
-    input clk,
-    input rst_n
 );
-
+    logic             clk;
+    logic             rst_n;
     logic [WIDTH-1:0] data_in;
     logic              wr_en;
     logic              rd_en;
@@ -26,7 +24,7 @@ interface fifo_if #(
         input data_in, wr_en, rd_en, data_out, full, empty, data_vld;
     endclocking
 
-    modport DRV (clocking drv_cb, input clk, rst_n);
-    modport MON (clocking mon_cb, input clk, rst_n);
+    modport DRV (clocking drv_cb,  clk, rst_n);
+    modport MON (clocking mon_cb,  clk, rst_n);
 
 endinterface
